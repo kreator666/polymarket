@@ -13,17 +13,26 @@
 """
 
 import sys
-import io
+import os
 import requests
 import json
 from dataclasses import dataclass, asdict
 from typing import List, Optional, Dict, Any
 from datetime import datetime
 
-if sys.stdout.encoding != 'utf-8':
-    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
-if sys.stderr.encoding != 'utf-8':
-    sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8')
+os.environ['PYTHONIOENCODING'] = 'utf-8'
+
+def _print_safe(*args, **kwargs):
+    try:
+        print(*args, **kwargs)
+    except UnicodeEncodeError:
+        new_args = []
+        for arg in args:
+            if isinstance(arg, str):
+                new_args.append(arg.encode(sys.stdout.encoding, errors='replace').decode(sys.stdout.encoding))
+            else:
+                new_args.append(arg)
+        print(*new_args, **kwargs)
 
 
 @dataclass
@@ -104,7 +113,7 @@ class HighPriceMarketFilter:
             resp.raise_for_status()
             return resp.json()
         except Exception as e:
-            print(f"获取事件时出错: {e}")
+            _print_safe(f"获取事件时出错: {e}")
             return []
     
     def calculate_displayed_price(
@@ -265,24 +274,24 @@ class HighPriceMarketFilter:
         Returns:
             包含筛选结果的字典
         """
-        print("=" * 70)
-        print("Polymarket 高价标的筛选器")
-        print(f"价格阈值: > {price_threshold} | 初始扫描: {initial_events} 个事件")
-        print(f"按价格取前 {top_by_price} 个 → 按流动性取前 {top_by_liquidity} 个")
-        print("=" * 70)
+        _print_safe("=" * 70)
+        _print_safe("Polymarket 高价标的筛选器")
+        _print_safe(f"价格阈值: > {price_threshold} | 初始扫描: {initial_events} 个事件")
+        _print_safe(f"按价格取前 {top_by_price} 个 → 按流动性取前 {top_by_liquidity} 个")
+        _print_safe("=" * 70)
         
-        print(f"\n[1/5] 获取前 {initial_events} 个事件（按流动性排序）...")
+        _print_safe(f"\n[1/5] 获取前 {initial_events} 个事件（按流动性排序）...")
         events = self.fetch_events(limit=initial_events)
-        print(f"      成功获取 {len(events)} 个事件")
+        _print_safe(f"      成功获取 {len(events)} 个事件")
         
-        print(f"\n[2/5] 从事件中提取市场并筛选价格 > {price_threshold} 的标的...")
+        _print_safe(f"\n[2/5] 从事件中提取市场并筛选价格 > {price_threshold} 的标的...")
         high_price_markets = self.extract_markets_from_events(
             events, price_threshold
         )
-        print(f"      找到 {len(high_price_markets)} 个价格 > {price_threshold} 的标的")
+        _print_safe(f"      找到 {len(high_price_markets)} 个价格 > {price_threshold} 的标的")
         
         if not high_price_markets:
-            print("\n警告：未找到符合条件的标的")
+            _print_safe("\n警告：未找到符合条件的标的")
             return {
                 "price_threshold": price_threshold,
                 "initial_events_count": len(events),
@@ -291,16 +300,16 @@ class HighPriceMarketFilter:
                 "top_by_liquidity": []
             }
         
-        print(f"\n[3/5] 按价格从高到低排序，取前 {top_by_price} 个...")
+        _print_safe(f"\n[3/5] 按价格从高到低排序，取前 {top_by_price} 个...")
         high_price_markets.sort(
             key=lambda x: (x.displayed_price, x.total_liquidity),
             reverse=True
         )
         
         top_by_price = high_price_markets[:top_by_price]
-        print(f"      成功筛选出 {len(top_by_price)} 个高价标的")
+        _print_safe(f"      成功筛选出 {len(top_by_price)} 个高价标的")
         
-        print(f"\n[4/5] 从这 {len(top_by_price)} 个中按流动性从高到低排序...")
+        _print_safe(f"\n[4/5] 从这 {len(top_by_price)} 个中按流动性从高到低排序...")
         top_by_price_sorted_by_liquidity = sorted(
             top_by_price,
             key=lambda x: (x.total_liquidity, x.displayed_price),
@@ -308,44 +317,44 @@ class HighPriceMarketFilter:
         )
         
         top_by_liquidity = top_by_price_sorted_by_liquidity[:top_by_liquidity]
-        print(f"      成功筛选出 {len(top_by_liquidity)} 个流动性最高的标的")
+        _print_safe(f"      成功筛选出 {len(top_by_liquidity)} 个流动性最高的标的")
         
-        print(f"\n[5/5] 输出结果...")
+        _print_safe(f"\n[5/5] 输出结果...")
         
-        print(f"\n{'='*70}")
-        print(f"阶段1结果：价格 > {price_threshold} 的前 {top_by_price} 个标的（按价格排序）")
-        print(f"{'='*70}\n")
+        _print_safe(f"\n{'='*70}")
+        _print_safe(f"阶段1结果：价格 > {price_threshold} 的前 {top_by_price} 个标的（按价格排序）")
+        _print_safe(f"{'='*70}\n")
         
         for i, m in enumerate(top_by_price[:10], 1):
-            print(f"#{i:02d} | 价格: {m.displayed_price:.3f} | 流动性: {m.total_liquidity:,.0f} USDC")
-            print(f"      事件: {m.event_title}")
-            print(f"      市场: {m.market_question}")
-            print(f"      Slug: {m.slug}")
-            print(f"      Bid: {m.best_bid:.3f} | Ask: {m.best_ask:.3f} | 价差: {m.spread:.3f}")
+            _print_safe(f"#{i:02d} | 价格: {m.displayed_price:.3f} | 流动性: {m.total_liquidity:,.0f} USDC")
+            _print_safe(f"      事件: {m.event_title}")
+            _print_safe(f"      市场: {m.market_question}")
+            _print_safe(f"      Slug: {m.slug}")
+            _print_safe(f"      Bid: {m.best_bid:.3f} | Ask: {m.best_ask:.3f} | 价差: {m.spread:.3f}")
             if m.last_trade_price:
-                print(f"      最近成交价: {m.last_trade_price:.3f}")
-            print()
+                _print_safe(f"      最近成交价: {m.last_trade_price:.3f}")
+            _print_safe()
         
-        print(f"\n{'='*70}")
-        print(f"最终结果：流动性最高的前 {len(top_by_liquidity)} 个标的（从高价标的中筛选）")
-        print(f"{'='*70}\n")
+        _print_safe(f"\n{'='*70}")
+        _print_safe(f"最终结果：流动性最高的前 {len(top_by_liquidity)} 个标的（从高价标的中筛选）")
+        _print_safe(f"{'='*70}\n")
         
         for i, m in enumerate(top_by_liquidity, 1):
-            print(f"#{i:02d} | 流动性: {m.total_liquidity:,.0f} USDC | 价格: {m.displayed_price:.3f}")
-            print(f"      事件: {m.event_title}")
-            print(f"      市场: {m.market_question}")
-            print(f"      Slug: {m.slug}")
-            print(f"      Token ID: {m.token_id}")
-            print(f"      24h交易量: {m.volume_24hr:,.2f} USDC")
-            print(f"      总交易量: {m.volume:,.2f} USDC")
-            print(f"      订单簿启用: {'是' if m.enable_order_book else '否'}")
-            print(f"      URL: https://polymarket.com/event/{m.slug}")
-            print()
+            _print_safe(f"#{i:02d} | 流动性: {m.total_liquidity:,.0f} USDC | 价格: {m.displayed_price:.3f}")
+            _print_safe(f"      事件: {m.event_title}")
+            _print_safe(f"      市场: {m.market_question}")
+            _print_safe(f"      Slug: {m.slug}")
+            _print_safe(f"      Token ID: {m.token_id}")
+            _print_safe(f"      24h交易量: {m.volume_24hr:,.2f} USDC")
+            _print_safe(f"      总交易量: {m.volume:,.2f} USDC")
+            _print_safe(f"      订单簿启用: {'是' if m.enable_order_book else '否'}")
+            _print_safe(f"      URL: https://polymarket.com/event/{m.slug}")
+            _print_safe()
         
-        print("-" * 70)
-        print("Slug 列表（可直接用于前端 URL）:")
+        _print_safe("-" * 70)
+        _print_safe("Slug 列表（可直接用于前端 URL）:")
         for m in top_by_liquidity:
-            print(f"  https://polymarket.com/event/{m.slug}")
+            _print_safe(f"  https://polymarket.com/event/{m.slug}")
         
         return {
             "price_threshold": price_threshold,
@@ -379,7 +388,7 @@ class HighPriceMarketFilter:
         with open(filename, "w", encoding="utf-8") as f:
             json.dump(results, f, ensure_ascii=False, indent=2)
         
-        print(f"\n结果已保存到: {filename}")
+        _print_safe(f"\n结果已保存到: {filename}")
         return filename
 
 
