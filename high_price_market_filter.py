@@ -54,7 +54,8 @@ class HighPriceMarket:
     """高价市场数据结构"""
     event_title: str
     market_question: str
-    slug: str
+    event_slug: str
+    market_slug: str
     token_id: str
     condition_id: str
     best_bid: float
@@ -84,12 +85,17 @@ class HighPriceMarket:
         """买卖双方都有深度"""
         return self.bid_depth > 0 and self.ask_depth > 0
     
+    @property
+    def url(self) -> str:
+        """事件 URL（使用事件 slug）"""
+        return f"https://polymarket.com/event/{self.event_slug}"
+    
     def to_dict(self) -> Dict[str, Any]:
         return {
             **asdict(self),
             "total_liquidity": self.total_liquidity,
             "has_both_sides_depth": self.has_both_sides_depth,
-            "url": f"https://polymarket.com/event/{self.slug}",
+            "url": self.url,
             "extracted_at": datetime.now().isoformat()
         }
 
@@ -386,6 +392,7 @@ class HighPriceMarketFilter:
         
         for evt in events:
             event_title = evt.get("title", "")
+            event_slug = evt.get("slug", "")
             event_liquidity = float(evt.get("liquidity", 0) or 0)
             volume_24hr = float(evt.get("volume24hr", 0) or 0)
             volume = float(evt.get("volume", 0) or 0)
@@ -438,8 +445,9 @@ class HighPriceMarketFilter:
                 
                 all_candidates.append({
                     "event_title": event_title,
+                    "event_slug": event_slug,
                     "market_question": m.get("question", ""),
-                    "slug": m.get("slug", ""),
+                    "market_slug": m.get("slug", ""),
                     "token_id": token_id,
                     "condition_id": m.get("conditionId", ""),
                     "price_info": price_info,
@@ -470,8 +478,9 @@ class HighPriceMarketFilter:
                 
                 return HighPriceMarket(
                     event_title=candidate["event_title"],
+                    event_slug=candidate["event_slug"],
                     market_question=candidate["market_question"],
-                    slug=candidate["slug"],
+                    market_slug=candidate["market_slug"],
                     token_id=candidate["token_id"],
                     condition_id=candidate["condition_id"],
                     best_bid=candidate["price_info"]["best_bid"],
@@ -504,8 +513,9 @@ class HighPriceMarketFilter:
             for candidate in all_candidates:
                 filtered_markets.append(HighPriceMarket(
                     event_title=candidate["event_title"],
+                    event_slug=candidate["event_slug"],
                     market_question=candidate["market_question"],
-                    slug=candidate["slug"],
+                    market_slug=candidate["market_slug"],
                     token_id=candidate["token_id"],
                     condition_id=candidate["condition_id"],
                     best_bid=candidate["price_info"]["best_bid"],
@@ -623,7 +633,8 @@ class HighPriceMarketFilter:
             _print_safe(f"#{i:02d} | 价格: {m.displayed_price:.3f} | 流动性: {m.total_liquidity:,.0f} USDC")
             _print_safe(f"      事件: {m.event_title}")
             _print_safe(f"      市场: {m.market_question}")
-            _print_safe(f"      Slug: {m.slug}")
+            _print_safe(f"      事件 Slug (URL用): {m.event_slug}")
+            _print_safe(f"      市场 Slug: {m.market_slug}")
             _print_safe(f"      Bid: {m.best_bid:.3f} | Ask: {m.best_ask:.3f} | 价差: {m.spread:.3f}")
             if m.orderbook_check_passed:
                 _print_safe(f"      买入深度: {m.bid_depth:,.2f} USDC | 卖出深度: {m.ask_depth:,.2f} USDC")
@@ -639,7 +650,8 @@ class HighPriceMarketFilter:
             _print_safe(f"#{i:02d} | 流动性: {m.total_liquidity:,.0f} USDC | 价格: {m.displayed_price:.3f}")
             _print_safe(f"      事件: {m.event_title}")
             _print_safe(f"      市场: {m.market_question}")
-            _print_safe(f"      Slug: {m.slug}")
+            _print_safe(f"      事件 Slug (URL用): {m.event_slug}")
+            _print_safe(f"      市场 Slug: {m.market_slug}")
             _print_safe(f"      Token ID: {m.token_id}")
             _print_safe(f"      Bid: {m.best_bid:.3f} | Ask: {m.best_ask:.3f} | 价差: {m.spread:.3f}")
             if m.orderbook_check_passed:
@@ -647,13 +659,13 @@ class HighPriceMarketFilter:
             _print_safe(f"      24h交易量: {m.volume_24hr:,.2f} USDC")
             _print_safe(f"      总交易量: {m.volume:,.2f} USDC")
             _print_safe(f"      订单簿启用: {'是' if m.enable_order_book else '否'}")
-            _print_safe(f"      URL: https://polymarket.com/event/{m.slug}")
+            _print_safe(f"      URL: {m.url}")
             _print_safe()
         
         _print_safe("-" * 80)
         _print_safe("Slug 列表（可直接用于前端 URL）:")
         for m in top_by_liquidity:
-            _print_safe(f"  https://polymarket.com/event/{m.slug}")
+            _print_safe(f"  {m.url}")
         
         return {
             "price_min": self.price_min,
