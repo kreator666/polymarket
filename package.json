@@ -1,0 +1,43 @@
+{
+  "name": "polymarket",
+  "version": "1.0.0",
+  "description": "面向 [Polymarket](https://polymarket.com) 的量化交易基础设施，包含市场深度筛选器与中文开发文档知识库。",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "compile": "hardhat compile",
+    "test:hardhat": "hardhat test",
+    "node": "hardhat node",
+    "deploy:polygon": "hardhat run scripts/deploy.js --network polygon",
+    "deploy:mumbai": "hardhat run scripts/deploy.js --network polygonMumbai",
+    "trader:help": "node scripts/trading_example.js",
+    "trader:markets": "node scripts/trading_example.js markets",
+    "trader:orderbook": "node scripts/trading_example.js orderbook",
+    "trader:buy": "node scripts/trading_example.js buy",
+    "trader:sell": "node scripts/trading_example.js sell",
+    "trader:orders": "node scripts/trading_example.js orders",
+    "trader:trades": "node scripts/trading_example.js trades",
+    "trader:invest": "node scripts/trading_example.js invest",
+    "filter:markets": "python high_price_market_filter.py"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kreator666/polymarket.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/kreator666/polymarket/issues"
+  },
+  "homepage": "https://github.com/kreator666/polymarket#readme",
+  "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox": "^7.0.0",
+    "ethers": "^5.8.0",
+    "hardhat": "^3.4.3"
+  },
+  "dependencies": {
+    "@polymarket/clob-client": "^5.8.1",
+    "dotenv": "^17.4.2"
+  }
+}
